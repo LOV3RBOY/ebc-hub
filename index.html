@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="EBC Hub - Team media sharing platform for photos and videos">
+    <title>EBC Hub | Media Center</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Home Screen / Splash -->
+    <section id="home-screen" class="home-screen">
+        <div class="home-content">
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="4" y="8" width="40" height="32" rx="4" stroke="currentColor" stroke-width="2"/>
+                        <circle cx="16" cy="20" r="4" stroke="currentColor" stroke-width="2"/>
+                        <path d="M4 32L14 24L22 30L34 18L44 28" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="36" cy="16" r="2" fill="currentColor"/>
+                    </svg>
+                </div>
+                <h1 class="logo-text">EBC Hub</h1>
+            </div>
+            <p class="tagline">Your team's media center</p>
+            <button id="enter-btn" class="enter-btn">
+                <span>Enter</span>
+                <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        </div>
+        <div class="home-decoration">
+            <div class="deco-orb orb-1"></div>
+            <div class="deco-orb orb-2"></div>
+            <div class="deco-orb orb-3"></div>
+        </div>
+    </section>
+
+    <!-- Main Application -->
+    <main id="main-app" class="main-app hidden">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <div class="header-logo">
+                    <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="4" y="8" width="40" height="32" rx="4" stroke="currentColor" stroke-width="2"/>
+                        <circle cx="16" cy="20" r="4" stroke="currentColor" stroke-width="2"/>
+                        <path d="M4 32L14 24L22 30L34 18L44 28" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <span class="header-title">EBC Hub</span>
+            </div>
+            <div class="header-stats">
+                <div class="stat-pill">
+                    <span class="stat-label">Media</span>
+                    <span id="media-count" class="stat-value">0</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Content Wrapper -->
+        <div class="content-wrapper">
+            <!-- Media Gallery -->
+            <section class="gallery-section">
+                <div id="empty-state" class="empty-state">
+                    <div class="empty-icon">
+                        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="8" y="12" width="48" height="40" rx="4" stroke="currentColor" stroke-width="2" stroke-dasharray="4 4"/>
+                            <circle cx="24" cy="28" r="6" stroke="currentColor" stroke-width="2"/>
+                            <path d="M8 44L20 34L30 42L44 28L56 38" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M32 8V16M32 16L28 12M32 16L36 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <h2 class="empty-title">No media yet</h2>
+                    <p class="empty-text">Upload photos and videos to get started</p>
+                </div>
+                <div id="media-grid" class="media-grid"></div>
+            </section>
+
+            <!-- Tools Sidebar -->
+            <aside id="tools-sidebar" class="tools-sidebar">
+                <div class="sidebar-header">
+                    <h2 class="sidebar-title">Tools</h2>
+                    <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle sidebar">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M15 19L8 12L15 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="sidebar-content">
+                    <!-- Upload Tool -->
+                    <div class="tool-card">
+                        <div class="tool-header">
+                            <div class="tool-icon upload-icon">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M21 15V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                    <path d="M12 16V3M12 3L7 8M12 3L17 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                            <span class="tool-name">Upload</span>
+                        </div>
+                        <p class="tool-desc">Add photos & videos</p>
+                        <button id="upload-btn" class="tool-btn primary-btn">
+                            <span>Choose Files</span>
+                        </button>
+                        <div id="drop-zone" class="drop-zone">
+                            <span>or drag & drop here</span>
+                        </div>
+                    </div>
+
+                    <!-- Download Tool -->
+                    <div class="tool-card">
+                        <div class="tool-header">
+                            <div class="tool-icon download-icon">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M21 15V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                    <path d="M12 3V16M12 16L7 11M12 16L17 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                            <span class="tool-name">Download</span>
+                        </div>
+                        <p class="tool-desc">Save selected media</p>
+                        <button id="download-selected-btn" class="tool-btn secondary-btn" disabled>
+                            <span>Download Selected</span>
+                            <span id="selected-count" class="badge">0</span>
+                        </button>
+                        <button id="select-all-btn" class="tool-btn ghost-btn">
+                            Select All
+                        </button>
+                    </div>
+
+                    <!-- Filter Tool -->
+                    <div class="tool-card">
+                        <div class="tool-header">
+                            <div class="tool-icon filter-icon">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M22 3H2L10 12.46V19L14 21V12.46L22 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                            <span class="tool-name">Filter</span>
+                        </div>
+                        <div class="filter-buttons">
+                            <button class="filter-btn active" data-filter="all">All</button>
+                            <button class="filter-btn" data-filter="image">Photos</button>
+                            <button class="filter-btn" data-filter="video">Videos</button>
+                        </div>
+                    </div>
+
+                    <!-- Search Tool -->
+                    <div class="tool-card">
+                        <div class="tool-header">
+                            <div class="tool-icon search-icon">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+                                    <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                            <span class="tool-name">Search</span>
+                        </div>
+                        <input type="text" id="search-input" class="search-input" placeholder="Search by filename...">
+                    </div>
+
+                    <!-- Sort Tool -->
+                    <div class="tool-card">
+                        <div class="tool-header">
+                            <div class="tool-icon sort-icon">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M3 6H21M3 12H15M3 18H9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                            <span class="tool-name">Sort</span>
+                        </div>
+                        <select id="sort-select" class="sort-select">
+                            <option value="newest">Newest First</option>
+                            <option value="oldest">Oldest First</option>
+                            <option value="name-asc">Name A-Z</option>
+                            <option value="name-desc">Name Z-A</option>
+                        </select>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Mobile Sidebar Toggle -->
+        <button id="mobile-sidebar-toggle" class="mobile-sidebar-toggle" aria-label="Open tools">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+    </main>
+
+    <!-- Lightbox Modal -->
+    <div id="lightbox" class="lightbox hidden">
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-container">
+            <button id="lightbox-close" class="lightbox-close" aria-label="Close">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </button>
+            <button id="lightbox-prev" class="lightbox-nav lightbox-prev" aria-label="Previous">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15 19L8 12L15 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <div class="lightbox-content">
+                <img id="lightbox-image" class="lightbox-media hidden" alt="Preview">
+                <video id="lightbox-video" class="lightbox-media hidden" controls></video>
+            </div>
+            <button id="lightbox-next" class="lightbox-nav lightbox-next" aria-label="Next">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 5L16 12L9 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <div class="lightbox-info">
+                <span id="lightbox-filename" class="lightbox-filename"></span>
+                <button id="lightbox-download" class="lightbox-download" aria-label="Download">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 15V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M12 3V16M12 16L7 11M12 16L17 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Download</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Progress Toast -->
+    <div id="upload-toast" class="upload-toast hidden">
+        <div class="toast-content">
+            <div class="toast-icon">
+                <svg class="spinner" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" opacity="0.25"/>
+                    <path d="M12 2C6.48 2 2 6.48 2 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <span id="toast-text" class="toast-text">Uploading...</span>
+        </div>
+        <div id="toast-progress" class="toast-progress"></div>
+    </div>
+
+    <!-- Hidden Elements -->
+    <input type="file" id="file-input" multiple accept="image/*,video/*" hidden>
+    <video id="video-processor" hidden muted></video>
+    <canvas id="thumbnail-canvas" hidden></canvas>
+
+    <script src="app.js"></script>
+</body>
+</html>
