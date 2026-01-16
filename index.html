@@ -178,6 +178,45 @@
                             <option value="name-desc">Name Z-A</option>
                         </select>
                     </div>
+
+                    <!-- Enhance Tool -->
+                    <div class="tool-card enhance-tool">
+                        <div class="tool-header">
+                            <div class="tool-icon enhance-icon">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path
+                                        d="M12 3V4M12 20V21M4 12H3M6.31 6.31L5.6 5.6M17.69 6.31L18.4 5.6M6.31 17.69L5.6 18.4M17.69 17.69L18.4 18.4M21 12H20"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                                    <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2" />
+                                </svg>
+                            </div>
+                            <span class="tool-name">Enhance</span>
+                        </div>
+                        <p class="tool-desc">Auto-improve photo quality</p>
+                        <button id="enhance-selected-btn" class="tool-btn enhance-btn" disabled>
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16"
+                                height="16">
+                                <path
+                                    d="M12 3V4M12 20V21M4 12H3M6.31 6.31L5.6 5.6M17.69 6.31L18.4 5.6M6.31 17.69L5.6 18.4M17.69 17.69L18.4 18.4M21 12H20"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+                            </svg>
+                            <span>Enhance Selected</span>
+                        </button>
+                        <div class="preset-buttons">
+                            <span class="preset-label">Quick Presets</span>
+                            <div class="preset-grid">
+                                <button class="preset-btn" data-preset="encore-vibes"
+                                    title="Warm, vibrant, beach club energy">Vibes</button>
+                                <button class="preset-btn" data-preset="pool-day"
+                                    title="Boosted blues, bright and fresh">Pool</button>
+                                <button class="preset-btn" data-preset="golden-hour"
+                                    title="Warm glow, soft golden tones">Golden</button>
+                                <button class="preset-btn" data-preset="clean-pro"
+                                    title="Neutral, sharp, professional">Pro</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </aside>
         </div>
@@ -219,15 +258,26 @@
             </button>
             <div class="lightbox-info">
                 <span id="lightbox-filename" class="lightbox-filename"></span>
-                <button id="lightbox-download" class="lightbox-download" aria-label="Download">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M21 15V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V15"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                        <path d="M12 3V16M12 16L7 11M12 16L17 11" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                    <span>Download</span>
-                </button>
+                <div class="lightbox-actions">
+                    <button id="lightbox-enhance" class="lightbox-action-btn enhance-action" aria-label="Enhance Photo">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M12 3V4M12 20V21M4 12H3M6.31 6.31L5.6 5.6M17.69 6.31L18.4 5.6M6.31 17.69L5.6 18.4M17.69 17.69L18.4 18.4M21 12H20"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                            <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                        <span>Enhance</span>
+                    </button>
+                    <button id="lightbox-download" class="lightbox-action-btn" aria-label="Download">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 15V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V15"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                            <path d="M12 3V16M12 16L7 11M12 16L17 11" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <span>Download</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -251,6 +301,7 @@
     <video id="video-processor" hidden muted></video>
     <canvas id="thumbnail-canvas" hidden></canvas>
 
+    <script src="enhance.js"></script>
     <script src="app.js"></script>
 </body>
 
