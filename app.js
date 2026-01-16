@@ -64,11 +64,12 @@ const elements = {
     lightboxPrev: document.getElementById('lightbox-prev'),
     lightboxNext: document.getElementById('lightbox-next'),
     lightboxDownload: document.getElementById('lightbox-download'),
-    lightboxEnhance: document.getElementById('lightbox-enhance'),
 
-    // Enhance
-    enhanceSelectedBtn: document.getElementById('enhance-selected-btn'),
-    presetBtns: document.querySelectorAll('.preset-btn'),
+    // Captions
+    captionTabs: document.querySelectorAll('.caption-tab'),
+    captionList: document.getElementById('caption-list'),
+    hashtagBundle: document.getElementById('hashtag-bundle'),
+    copyHashtagsBtn: document.getElementById('copy-hashtags-btn'),
 
     // Toast
     uploadToast: document.getElementById('upload-toast'),
@@ -427,12 +428,6 @@ function updateSelectionUI() {
     elements.selectedCount.textContent = state.selectedItems.size;
     elements.downloadSelectedBtn.disabled = state.selectedItems.size === 0;
 
-    // Update enhance button - only works on images
-    const selectedImages = state.mediaItems.filter(item =>
-        state.selectedItems.has(item.id) && item.type === 'image'
-    );
-    elements.enhanceSelectedBtn.disabled = selectedImages.length === 0;
-
     // Update button text
     elements.selectAllBtn.textContent =
         state.selectedItems.size === state.filteredItems.length && state.filteredItems.length > 0
@@ -589,164 +584,97 @@ function hideToast(success = true) {
 }
 
 // ===========================
-// Enhancement Functions
+// Caption Generator
 // ===========================
-async function enhanceImage(item, presetName = 'encore-vibes') {
-    if (item.type !== 'image') return null;
+const captionData = {
+    vibes: [
+        "Another day in paradise 🌴☀️",
+        "Living our best life poolside 💦",
+        "This is what dreams are made of ✨",
+        "Sun's out, fun's out 🌞",
+        "Making memories that last forever 🌅",
+        "The only place we want to be 🏝️"
+    ],
+    team: [
+        "The crew that makes it happen 💪",
+        "Behind every great day is a great team 🙌",
+        "Working hard, playing harder 🔥",
+        "This is the energy we bring every day ⚡",
+        "Squad goals achieved 🎯",
+        "The dream team in action 🌟"
+    ],
+    event: [
+        "You had to be there 🎉",
+        "Last night was legendary 🔥",
+        "When the vibes hit different ✨",
+        "This is what we do 🎶",
+        "Unforgettable moments 📸",
+        "The party never stops 🎊"
+    ]
+};
 
-    try {
-        // Get the blob as data URL
-        const blob = item.blob instanceof Blob ? item.blob : new Blob([item.blob], { type: item.mimeType });
-        const dataUrl = await blobToDataUrl(blob);
+const hashtagBundles = {
+    vibes: "#EncoreBeach #LasVegas #PoolParty #VegasPool #SummerVibes #PoolLife",
+    team: "#EncoreBeach #TeamWork #VegasLife #BehindTheScenes #PoolCrew #LasVegas",
+    event: "#EncoreBeach #LasVegas #VegasNights #PoolParty #NightLife #VegasEvents"
+};
 
-        // Apply enhancement
-        const enhancedDataUrl = await ImageEnhancer.applyPreset(dataUrl, presetName);
+let currentCaptionCategory = 'vibes';
 
-        // Convert back to blob
-        const enhancedBlob = await dataUrlToBlob(enhancedDataUrl);
+function renderCaptions(category) {
+    currentCaptionCategory = category;
+    const captions = captionData[category] || [];
 
-        return enhancedBlob;
-    } catch (error) {
-        console.error('Enhancement failed:', error);
-        return null;
-    }
-}
+    elements.captionList.innerHTML = captions.map(caption => `
+        <div class="caption-item">
+            <span class="caption-text">${caption}</span>
+            <button class="copy-caption-btn" data-caption="${caption.replace(/"/g, '&quot;')}" title="Copy caption">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="2"/>
+                </svg>
+            </button>
+        </div>
+    `).join('');
 
-function blobToDataUrl(blob) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
+    // Update hashtags
+    elements.hashtagBundle.textContent = hashtagBundles[category] || hashtagBundles.vibes;
+
+    // Add click listeners to copy buttons
+    elements.captionList.querySelectorAll('.copy-caption-btn').forEach(btn => {
+        btn.addEventListener('click', () => copyCaption(btn));
     });
 }
 
-function dataUrlToBlob(dataUrl) {
-    return new Promise((resolve) => {
-        const arr = dataUrl.split(',');
-        const mime = arr[0].match(/:(.*?);/)[1];
-        const bstr = atob(arr[1]);
-        let n = bstr.length;
-        const u8arr = new Uint8Array(n);
-        while (n--) {
-            u8arr[n] = bstr.charCodeAt(n);
-        }
-        resolve(new Blob([u8arr], { type: mime }));
+function copyCaption(btn) {
+    const caption = btn.dataset.caption;
+    navigator.clipboard.writeText(caption).then(() => {
+        btn.classList.add('copied');
+        setTimeout(() => btn.classList.remove('copied'), 1500);
     });
 }
 
-async function enhanceSelectedImages(presetName = 'encore-vibes') {
-    const selectedImages = state.mediaItems.filter(item =>
-        state.selectedItems.has(item.id) && item.type === 'image'
-    );
-
-    if (selectedImages.length === 0) return;
-
-    showToast(`Enhancing ${selectedImages.length} photo(s)...`, true);
-    let processed = 0;
-
-    for (const item of selectedImages) {
-        const enhancedBlob = await enhanceImage(item, presetName);
-
-        if (enhancedBlob) {
-            // Update the item with enhanced version
-            item.blob = enhancedBlob;
-            item.enhanced = true;
-
-            // Regenerate thumbnail
-            item.thumbnail = await generateImageThumbnailFromBlob(enhancedBlob);
-
-            // Update in database
-            await saveMediaToDB(item);
-        }
-
-        processed++;
-        updateToastProgress((processed / selectedImages.length) * 100);
-    }
-
-    hideToast(true);
-    elements.toastText.textContent = 'Enhancement complete!';
-
-    // Refresh gallery
-    updateGallery();
-}
-
-async function generateImageThumbnailFromBlob(blob) {
-    return new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => {
-            const canvas = elements.thumbnailCanvas;
-            const ctx = canvas.getContext('2d');
-
-            const maxSize = 400;
-            let width = img.width;
-            let height = img.height;
-
-            if (width > height) {
-                if (width > maxSize) {
-                    height = (height * maxSize) / width;
-                    width = maxSize;
-                }
-            } else {
-                if (height > maxSize) {
-                    width = (width * maxSize) / height;
-                    height = maxSize;
-                }
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-            ctx.drawImage(img, 0, 0, width, height);
-
-            URL.revokeObjectURL(img.src);
-            resolve(canvas.toDataURL('image/jpeg', 0.8));
-        };
-        img.src = URL.createObjectURL(blob);
-    });
-}
-
-async function enhanceLightboxImage(presetName = 'encore-vibes') {
-    if (state.lightboxIndex < 0) return;
-
-    const item = state.filteredItems[state.lightboxIndex];
-    if (!item || item.type !== 'image') return;
-
-    // Show processing state
-    const enhanceBtn = elements.lightboxEnhance;
-    const originalText = enhanceBtn.querySelector('span').textContent;
-    enhanceBtn.classList.add('processing');
-    enhanceBtn.querySelector('span').textContent = 'Processing...';
-
-    try {
-        const enhancedBlob = await enhanceImage(item, presetName);
-
-        if (enhancedBlob) {
-            // Update item
-            item.blob = enhancedBlob;
-            item.enhanced = true;
-            item.thumbnail = await generateImageThumbnailFromBlob(enhancedBlob);
-            await saveMediaToDB(item);
-
-            // Update lightbox display
-            elements.lightboxImage.src = URL.createObjectURL(enhancedBlob);
-
-            // Refresh gallery in background
-            updateGallery();
-
-            enhanceBtn.querySelector('span').textContent = 'Enhanced! ✨';
-            setTimeout(() => {
-                enhanceBtn.querySelector('span').textContent = originalText;
-            }, 2000);
-        }
-    } catch (error) {
-        console.error('Lightbox enhancement failed:', error);
-        enhanceBtn.querySelector('span').textContent = 'Failed';
+function copyHashtags() {
+    const hashtags = elements.hashtagBundle.textContent;
+    navigator.clipboard.writeText(hashtags).then(() => {
+        elements.copyHashtagsBtn.classList.add('copied');
+        elements.copyHashtagsBtn.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" width="12" height="12">
+                <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Copied!
+        `;
         setTimeout(() => {
-            enhanceBtn.querySelector('span').textContent = originalText;
-        }, 2000);
-    } finally {
-        enhanceBtn.classList.remove('processing');
-    }
+            elements.copyHashtagsBtn.classList.remove('copied');
+            elements.copyHashtagsBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" width="12" height="12">
+                    <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                Copy
+            `;
+        }, 1500);
+    });
 }
 
 // ===========================
@@ -883,21 +811,17 @@ function setupEventListeners() {
         }
     });
 
-    // Enhancement features
-    elements.enhanceSelectedBtn.addEventListener('click', () => enhanceSelectedImages('encore-vibes'));
-
-    // Preset buttons
-    elements.presetBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const preset = btn.dataset.preset;
-            if (state.selectedItems.size > 0) {
-                enhanceSelectedImages(preset);
-            }
+    // Caption tab switching
+    elements.captionTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            elements.captionTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            renderCaptions(tab.dataset.category);
         });
     });
 
-    // Lightbox enhance button
-    elements.lightboxEnhance.addEventListener('click', () => enhanceLightboxImage('encore-vibes'));
+    // Copy hashtags button
+    elements.copyHashtagsBtn.addEventListener('click', copyHashtags);
 
     // Close mobile sidebar when clicking outside
     document.addEventListener('click', (e) => {
@@ -921,6 +845,9 @@ async function init() {
         updateGallery();
         updateMediaCount();
         setupEventListeners();
+
+        // Initialize captions
+        renderCaptions('vibes');
 
         console.log('EBC Hub initialized successfully');
     } catch (error) {

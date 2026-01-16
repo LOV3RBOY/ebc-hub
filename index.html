@@ -179,42 +179,44 @@
                         </select>
                     </div>
 
-                    <!-- Enhance Tool -->
-                    <div class="tool-card enhance-tool">
+                    <!-- Caption Generator -->
+                    <div class="tool-card caption-tool">
                         <div class="tool-header">
-                            <div class="tool-icon enhance-icon">
+                            <div class="tool-icon caption-icon">
                                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path
-                                        d="M12 3V4M12 20V21M4 12H3M6.31 6.31L5.6 5.6M17.69 6.31L18.4 5.6M6.31 17.69L5.6 18.4M17.69 17.69L18.4 18.4M21 12H20"
-                                        stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                                    <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2" />
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
                                 </svg>
                             </div>
-                            <span class="tool-name">Enhance</span>
+                            <span class="tool-name">Captions</span>
                         </div>
-                        <p class="tool-desc">Auto-improve photo quality</p>
-                        <button id="enhance-selected-btn" class="tool-btn enhance-btn" disabled>
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16"
-                                height="16">
-                                <path
-                                    d="M12 3V4M12 20V21M4 12H3M6.31 6.31L5.6 5.6M17.69 6.31L18.4 5.6M6.31 17.69L5.6 18.4M17.69 17.69L18.4 18.4M21 12H20"
-                                    stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
-                            </svg>
-                            <span>Enhance Selected</span>
-                        </button>
-                        <div class="preset-buttons">
-                            <span class="preset-label">Quick Presets</span>
-                            <div class="preset-grid">
-                                <button class="preset-btn" data-preset="encore-vibes"
-                                    title="Warm, vibrant, beach club energy">Vibes</button>
-                                <button class="preset-btn" data-preset="pool-day"
-                                    title="Boosted blues, bright and fresh">Pool</button>
-                                <button class="preset-btn" data-preset="golden-hour"
-                                    title="Warm glow, soft golden tones">Golden</button>
-                                <button class="preset-btn" data-preset="clean-pro"
-                                    title="Neutral, sharp, professional">Pro</button>
+                        <p class="tool-desc">Ready-to-post captions</p>
+
+                        <div class="caption-category-tabs">
+                            <button class="caption-tab active" data-category="vibes">Vibes</button>
+                            <button class="caption-tab" data-category="team">Team</button>
+                            <button class="caption-tab" data-category="event">Event</button>
+                        </div>
+
+                        <div class="caption-list" id="caption-list">
+                            <!-- Captions populate here -->
+                        </div>
+
+                        <div class="hashtag-section">
+                            <span class="hashtag-label">Hashtags</span>
+                            <div class="hashtag-bundle" id="hashtag-bundle">
+                                #EncoreBeach #LasVegas #PoolParty #VegasPool
                             </div>
+                            <button class="copy-hashtags-btn" id="copy-hashtags-btn">
+                                <svg viewBox="0 0 24 24" fill="none" width="12" height="12">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor"
+                                        stroke-width="2" />
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                                        stroke="currentColor" stroke-width="2" />
+                                </svg>
+                                Copy
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -259,15 +261,6 @@
             <div class="lightbox-info">
                 <span id="lightbox-filename" class="lightbox-filename"></span>
                 <div class="lightbox-actions">
-                    <button id="lightbox-enhance" class="lightbox-action-btn enhance-action" aria-label="Enhance Photo">
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M12 3V4M12 20V21M4 12H3M6.31 6.31L5.6 5.6M17.69 6.31L18.4 5.6M6.31 17.69L5.6 18.4M17.69 17.69L18.4 18.4M21 12H20"
-                                stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                            <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2" />
-                        </svg>
-                        <span>Enhance</span>
-                    </button>
                     <button id="lightbox-download" class="lightbox-action-btn" aria-label="Download">
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M21 15V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V15"
@@ -301,7 +294,6 @@
     <video id="video-processor" hidden muted></video>
     <canvas id="thumbnail-canvas" hidden></canvas>
 
-    <script src="enhance.js"></script>
     <script src="app.js"></script>
 </body>
 
