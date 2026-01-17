@@ -1273,25 +1273,34 @@ function initSportsWidget() {
 
     // Toggle Panel
     toggleBtn.addEventListener('click', () => {
-        panel.classList.add('active');
+        panel.classList.remove('hidden');
+        // Small delay to ensure display:none is removed before transform transition starts
+        requestAnimationFrame(() => {
+            panel.classList.add('active');
+        });
         loadMatches(currentLeague);
         startAutoRefresh();
     });
 
-    closeBtn.addEventListener('click', () => {
-        panel.classList.remove('active');
-        stopAutoRefresh();
-    });
+    closeBtn.addEventListener('click', closePanel);
 
     // Close on click outside
     document.addEventListener('click', (e) => {
         if (panel.classList.contains('active') &&
             !panel.contains(e.target) &&
             !toggleBtn.contains(e.target)) {
-            panel.classList.remove('active');
-            stopAutoRefresh();
+            closePanel();
         }
     });
+
+    function closePanel() {
+        panel.classList.remove('active');
+        stopAutoRefresh();
+        // Wait for transition to finish before hiding
+        setTimeout(() => {
+            panel.classList.add('hidden');
+        }, 400);
+    }
 
     // Validated League Switching
     tabs.forEach(tab => {
