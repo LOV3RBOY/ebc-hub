@@ -1,7 +1,28 @@
 /**
  * EBC Hub - Media Center Application
- * Full-featured media gallery with IndexedDB storage
+ * Full-featured media gallery with Firebase Cloud Storage
+ * Syncs media across all team members' devices in real-time
  */
+
+// ===========================
+// Firebase Imports
+// ===========================
+import {
+    storage,
+    db,
+    ref,
+    uploadBytes,
+    getDownloadURL,
+    deleteObject,
+    collection,
+    addDoc,
+    getDocs,
+    deleteDoc,
+    doc,
+    onSnapshot,
+    query,
+    orderBy
+} from './firebase-config.js';
 
 // ===========================
 // Configuration & State
@@ -18,7 +39,9 @@ const state = {
     currentSort: 'newest',
     searchQuery: '',
     lightboxIndex: -1,
-    filteredItems: []
+    filteredItems: [],
+    isOnline: navigator.onLine,
+    unsubscribeSync: null
 };
 
 // ===========================
@@ -140,6 +163,118 @@ async function deleteMediaFromDB(id) {
 }
 
 // ===========================
+// Firebase Cloud Storage Functions
+// ===========================
+
+/**
+ * Upload a file to Firebase Storage and return the download URL
+ */
+async function uploadToCloud(file, mediaId) {
+    const storageRef = ref(storage, `media/${mediaId}/${file.name}`);
+    const snapshot = await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    return downloadURL;
+}
+
+/**
+ * Save media item to Firebase (Storage + Firestore)
+ * - Uploads file blob to Storage
+ * - Saves metadata (with downloadURL) to Firestore
+ */
+async function saveMediaToCloud(mediaItem) {
+    // Upload the file blob to Firebase Storage
+    const downloadURL = await uploadToCloud(mediaItem.blob, mediaItem.id);
+
+    // Prepare metadata for Firestore (without blob - just URL)
+    const metadata = {
+        id: mediaItem.id,
+        name: mediaItem.name,
+        type: mediaItem.type,
+        mimeType: mediaItem.mimeType,
+        size: mediaItem.size,
+        thumbnail: mediaItem.thumbnail,
+        downloadURL: downloadURL,
+        date: mediaItem.date,
+        uploadedAt: Date.now()
+    };
+
+    // Save to Firestore
+    const docRef = await addDoc(collection(db, 'media'), metadata);
+
+    return { ...metadata, docId: docRef.id };
+}
+
+/**
+ * Load all media items from Firestore
+ */
+async function loadMediaFromCloud() {
+    const q = query(collection(db, 'media'), orderBy('date', 'desc'));
+    const snapshot = await getDocs(q);
+
+    return snapshot.docs.map(docSnap => ({
+        ...docSnap.data(),
+        docId: docSnap.id
+    }));
+}
+
+/**
+ * Delete media from Firebase (Storage + Firestore)
+ */
+async function deleteMediaFromCloud(item) {
+    // Delete from Storage
+    const storageRef = ref(storage, `media/${item.id}/${item.name}`);
+    try {
+        await deleteObject(storageRef);
+    } catch (e) {
+        console.warn('Storage delete failed (file may not exist):', e);
+    }
+
+    // Delete from Firestore
+    if (item.docId) {
+        await deleteDoc(doc(db, 'media', item.docId));
+    }
+}
+
+/**
+ * Set up real-time sync listener for new uploads from other users
+ * When someone uploads/deletes media, all connected clients update automatically
+ */
+function setupRealtimeSync() {
+    const q = query(collection(db, 'media'), orderBy('date', 'desc'));
+
+    state.unsubscribeSync = onSnapshot(q, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            const data = change.doc.data();
+            const docId = change.doc.id;
+
+            if (change.type === 'added') {
+                // Only add if not already in local state (avoid duplicates)
+                if (!state.mediaItems.find(item => item.id === data.id)) {
+                    state.mediaItems.unshift({ ...data, docId });
+                    console.log('📥 New media synced:', data.name);
+                }
+            } else if (change.type === 'removed') {
+                // Remove from local state
+                state.mediaItems = state.mediaItems.filter(item => item.id !== data.id);
+                console.log('🗑️ Media removed:', data.name);
+            } else if (change.type === 'modified') {
+                // Update existing item
+                const index = state.mediaItems.findIndex(item => item.id === data.id);
+                if (index !== -1) {
+                    state.mediaItems[index] = { ...data, docId };
+                }
+            }
+        });
+
+        // Re-render gallery with updated data
+        updateGallery();
+        updateMediaCount();
+    }, (error) => {
+        console.error('Real-time sync error:', error);
+    });
+}
+
+// ===========================
 // File Processing
 // ===========================
 function generateId() {
@@ -235,7 +370,7 @@ async function processFiles(files) {
 
     if (validFiles.length === 0) return;
 
-    showToast('Uploading...', true);
+    showToast('Uploading to cloud...', true);
     let processed = 0;
 
     for (const file of validFiles) {
@@ -261,13 +396,28 @@ async function processFiles(files) {
                 date: Date.now()
             };
 
-            await saveMediaToDB(mediaItem);
-            state.mediaItems.push(mediaItem);
+            // Upload to Firebase cloud storage
+            const cloudItem = await saveMediaToCloud(mediaItem);
+
+            // Add to local state (with downloadURL, without blob to save memory)
+            state.mediaItems.push({
+                ...cloudItem,
+                blob: null // Don't keep blob in memory after upload
+            });
+
+            // Also save to local IndexedDB for offline access
+            await saveMediaToDB({
+                ...mediaItem,
+                downloadURL: cloudItem.downloadURL,
+                docId: cloudItem.docId
+            });
 
             processed++;
             updateToastProgress((processed / validFiles.length) * 100);
+            console.log(`☁️ Uploaded: ${file.name}`);
         } catch (error) {
-            console.error('Error processing file:', file.name, error);
+            console.error('Error uploading file:', file.name, error);
+            showToast(`Failed to upload ${file.name}`, false);
         }
     }
 
@@ -451,18 +601,35 @@ function updateSelectionUI() {
 // ===========================
 // Download Functions
 // ===========================
-function downloadMedia(item) {
-    const blob = item.blob instanceof Blob ? item.blob : new Blob([item.blob], { type: item.mimeType });
-    const url = URL.createObjectURL(blob);
+async function downloadMedia(item) {
+    try {
+        let url;
 
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = item.name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+        if (item.downloadURL) {
+            // Cloud item - fetch from Firebase Storage
+            const response = await fetch(item.downloadURL);
+            const blob = await response.blob();
+            url = URL.createObjectURL(blob);
+        } else if (item.blob) {
+            // Local item fallback
+            const blob = item.blob instanceof Blob ? item.blob : new Blob([item.blob], { type: item.mimeType });
+            url = URL.createObjectURL(blob);
+        } else {
+            console.error('No download source available for:', item.name);
+            return;
+        }
 
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = item.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+        console.error('Download failed:', error);
+    }
 }
 
 function downloadSelected() {
@@ -501,13 +668,23 @@ function updateLightboxContent(item) {
     elements.lightboxImage.classList.add('hidden');
     elements.lightboxVideo.classList.add('hidden');
 
-    if (isVideo) {
+    // Prefer downloadURL (cloud) over local blob
+    let src;
+    if (item.downloadURL) {
+        src = item.downloadURL;
+    } else if (item.blob) {
         const blob = item.blob instanceof Blob ? item.blob : new Blob([item.blob], { type: item.mimeType });
-        elements.lightboxVideo.src = URL.createObjectURL(blob);
+        src = URL.createObjectURL(blob);
+    } else if (item.thumbnail) {
+        // Fallback to thumbnail if no other source
+        src = item.thumbnail;
+    }
+
+    if (isVideo) {
+        elements.lightboxVideo.src = src;
         elements.lightboxVideo.classList.remove('hidden');
     } else {
-        const blob = item.blob instanceof Blob ? item.blob : new Blob([item.blob], { type: item.mimeType });
-        elements.lightboxImage.src = URL.createObjectURL(blob);
+        elements.lightboxImage.src = src;
         elements.lightboxImage.classList.remove('hidden');
     }
 
@@ -839,8 +1016,21 @@ function setupEventListeners() {
 // ===========================
 async function init() {
     try {
+        // Initialize local IndexedDB first (for offline fallback)
         await initDB();
-        state.mediaItems = await loadMediaFromDB();
+
+        // Try to load from cloud first
+        try {
+            console.log('☁️ Loading media from cloud...');
+            state.mediaItems = await loadMediaFromCloud();
+            console.log(`☁️ Loaded ${state.mediaItems.length} items from cloud`);
+
+            // Set up real-time sync for updates from other users
+            setupRealtimeSync();
+        } catch (cloudError) {
+            console.warn('Cloud load failed, falling back to local storage:', cloudError);
+            state.mediaItems = await loadMediaFromDB();
+        }
 
         updateGallery();
         updateMediaCount();
@@ -849,7 +1039,7 @@ async function init() {
         // Initialize captions
         renderCaptions('vibes');
 
-        console.log('EBC Hub initialized successfully');
+        console.log('🏖️ EBC Hub initialized with cloud sync!');
     } catch (error) {
         console.error('Failed to initialize app:', error);
     }
