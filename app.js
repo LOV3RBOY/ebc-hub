@@ -25,6 +25,11 @@ import {
 } from './firebase-config.js';
 
 // ===========================
+// Gemini AI Import
+// ===========================
+import { generateAICaptions } from './gemini-service.js';
+
+// ===========================
 // Configuration & State
 // ===========================
 const DB_NAME = 'EBCHubDB';
@@ -41,7 +46,8 @@ const state = {
     lightboxIndex: -1,
     filteredItems: [],
     isOnline: navigator.onLine,
-    unsubscribeSync: null
+    unsubscribeSync: null,
+    selectedImageForCaption: null // Track image selected for AI caption generation
 };
 
 // ===========================
@@ -93,6 +99,14 @@ const elements = {
     captionList: document.getElementById('caption-list'),
     hashtagBundle: document.getElementById('hashtag-bundle'),
     copyHashtagsBtn: document.getElementById('copy-hashtags-btn'),
+
+    // AI Captions
+    selectedImagePreview: document.getElementById('selected-image-preview'),
+    aiPreviewImage: document.getElementById('ai-preview-image'),
+    generateAiBtn: document.getElementById('generate-ai-caption-btn'),
+    aiCaptionsContainer: document.getElementById('ai-captions-container'),
+    aiLoading: document.getElementById('ai-loading'),
+    aiCaptionsList: document.getElementById('ai-captions-list'),
 
     // Toast
     uploadToast: document.getElementById('upload-toast'),
@@ -689,6 +703,20 @@ function updateLightboxContent(item) {
     }
 
     elements.lightboxFilename.textContent = item.name;
+
+    // AI Caption Integration
+    // Automatically select this image for AI caption generation
+    if (!isVideo) {
+        // If it's a cloud URL, we can use it directly
+        // If it's a blob, we need to convert it to a data URL if possible or just use the blob URL
+        // Our service handles URLs, so src is fine
+        selectImageForCaption(src);
+    } else {
+        // For video, we might want to use the thumbnail if available
+        if (item.thumbnail) {
+            selectImageForCaption(item.thumbnail);
+        }
+    }
 }
 
 function updateLightboxNav() {
@@ -855,6 +883,127 @@ function copyHashtags() {
 }
 
 // ===========================
+// AI Caption Functions
+// ===========================
+
+/**
+ * Handle image selection for AI caption generation
+ * Called when user selects an image in the gallery or sets current lightbox image
+ */
+function selectImageForCaption(imageSrc) {
+    state.selectedImageForCaption = imageSrc;
+
+    // Update UI preview
+    elements.aiPreviewImage.src = imageSrc;
+    elements.aiPreviewImage.classList.remove('hidden');
+    elements.selectedImagePreview.classList.add('has-image');
+    elements.selectedImagePreview.querySelector('.no-image-selected').classList.add('hidden');
+
+    // Enable generate button
+    elements.generateAiBtn.disabled = false;
+
+    // Reset previous results
+    elements.aiCaptionsContainer.classList.add('hidden');
+    elements.aiCaptionsList.innerHTML = '';
+}
+
+/**
+ * Handle Generate AI Caption button click
+ */
+async function handleGenerateAICaption() {
+    if (!state.selectedImageForCaption) return;
+
+    // Show loading state
+    elements.generateAiBtn.disabled = true;
+    elements.generateAiBtn.classList.add('loading');
+    elements.generateAiBtn.querySelector('span').textContent = 'Generating...';
+
+    elements.aiCaptionsContainer.classList.remove('hidden');
+    elements.aiLoading.classList.remove('hidden');
+    elements.aiCaptionsList.innerHTML = '';
+
+    try {
+        console.log('🤖 Asking Gemini to generate catchy captions...');
+        const captions = await generateAICaptions(state.selectedImageForCaption);
+
+        renderAICaptions(captions);
+
+    } catch (error) {
+        console.error('Failed to generate AI captions:', error);
+
+        // Show error UI
+        elements.aiCaptionsList.innerHTML = `
+            <div class="ai-error">
+                <p>Failed to generate captions. Please try again.</p>
+                <div class="ai-error-detail">${error.message || 'Unknown error'}</div>
+                <button class="ai-error-retry" onclick="document.getElementById('generate-ai-caption-btn').click()">
+                    Retry
+                </button>
+            </div>
+        `;
+    } finally {
+        // Reset loading state
+        elements.generateAiBtn.disabled = false;
+        elements.generateAiBtn.classList.remove('loading');
+        elements.generateAiBtn.querySelector('span').textContent = 'Generate AI Caption';
+        elements.aiLoading.classList.add('hidden');
+    }
+}
+
+/**
+ * Render generated captions to the UI
+ */
+function renderAICaptions(captions) {
+    if (!captions || captions.length === 0) {
+        elements.aiCaptionsList.innerHTML = '<div class="ai-error">No captions generated. Try a different image.</div>';
+        return;
+    }
+
+    elements.aiCaptionsList.innerHTML = captions.map((item, index) => `
+        <div class="ai-caption-item">
+            <p class="ai-caption-text">${item.text}</p>
+            <p class="ai-caption-hashtags">${item.hashtags}</p>
+            
+            <div class="ai-caption-actions">
+                <button class="ai-copy-btn" onclick="copyAICaption(this, '${item.text.replace(/'/g, "\\'")}', 'text')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    Copy Text
+                </button>
+                <button class="ai-copy-btn" onclick="copyAICaption(this, '${item.hashtags.replace(/'/g, "\\'")}', 'tags')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 9h16M4 15h16M10 3L8 21M16 3l-2 18"></path>
+                    </svg>
+                    Copy Tags
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Make copy function globally available for onclick handlers
+window.copyAICaption = function (btn, text, type) {
+    navigator.clipboard.writeText(text).then(() => {
+        const originalText = btn.innerHTML;
+
+        btn.classList.add('copied');
+        btn.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+                <path d="M20 6L9 17L4 12" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Copied!
+        `;
+
+        setTimeout(() => {
+            btn.classList.remove('copied');
+            btn.innerHTML = originalText;
+        }, 1500);
+    });
+};
+
+// ===========================
 // Sidebar Functions
 // ===========================
 function toggleSidebar() {
@@ -999,6 +1148,11 @@ function setupEventListeners() {
 
     // Copy hashtags button
     elements.copyHashtagsBtn.addEventListener('click', copyHashtags);
+
+    // AI Caption Generator
+    if (elements.generateAiBtn) {
+        elements.generateAiBtn.addEventListener('click', handleGenerateAICaption);
+    }
 
     // Close mobile sidebar when clicking outside
     document.addEventListener('click', (e) => {
