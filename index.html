@@ -151,6 +151,20 @@
                         </button>
                     </div>
 
+                    <!-- Sports Tool -->
+                    <div class="tool-card">
+                        <div class="tool-header">
+                            <div class="tool-icon sports-icon">
+                                <span>⚽</span>
+                            </div>
+                            <span class="tool-name">Sports Center</span>
+                        </div>
+                        <p class="tool-desc">Real-time football scores</p>
+                        <button id="toggle-sports-btn" class="tool-btn secondary-btn">
+                            <span>Open Scoreboard</span>
+                        </button>
+                    </div>
+
                     <!-- Filter Tool -->
                     <div class="tool-card">
                         <div class="tool-header">
@@ -356,6 +370,36 @@
             <span id="toast-text" class="toast-text">Uploading...</span>
         </div>
         <div id="toast-progress" class="toast-progress"></div>
+    </div>
+
+    <!-- Sports Widget Sliding Panel -->
+    <div id="sports-panel" class="sports-panel hidden">
+        <div class="sports-header">
+            <div class="sports-title">
+                <span>⚽</span> Live Scores
+            </div>
+            <button id="close-sports-btn" class="close-btn">&times;</button>
+        </div>
+
+        <div class="league-tabs">
+            <button class="league-tab active" data-league="eng.1">PL</button>
+            <button class="league-tab" data-league="uefa.champions">UCL</button>
+            <button class="league-tab" data-league="esp.1">La Liga</button>
+            <button class="league-tab" data-league="usa.1">MLS</button>
+        </div>
+
+        <div id="sports-content" class="sports-content">
+            <!-- Loading State -->
+            <div class="sports-loading">
+                <div class="spinner"></div>
+                <p>Loading live matches...</p>
+            </div>
+            <!-- Matches will be injected here -->
+        </div>
+
+        <div class="sports-footer">
+            Powered by ESPN
+        </div>
     </div>
 
     <!-- Hidden Elements -->

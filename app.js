@@ -28,6 +28,7 @@ import {
 // Gemini AI Import
 // ===========================
 import { generateAICaptions } from './gemini-service.js';
+import { fetchLiveScores, getMatchStatus, LEAGUES } from './sports-service.js';
 
 // ===========================
 // Configuration & State
@@ -1254,6 +1255,118 @@ function setupEventListeners() {
 }
 
 // ===========================
+// Sports Widget Logic
+// ===========================
+function initSportsWidget() {
+    const toggleBtn = document.getElementById('toggle-sports-btn');
+    const closeBtn = document.getElementById('close-sports-btn');
+    const panel = document.getElementById('sports-panel');
+    const content = document.getElementById('sports-content');
+    const tabs = document.querySelectorAll('.league-tab');
+    let currentLeague = 'eng.1';
+    let autoRefreshInterval;
+
+    if (!toggleBtn || !panel) {
+        console.warn('Sports widget elements not found');
+        return;
+    }
+
+    // Toggle Panel
+    toggleBtn.addEventListener('click', () => {
+        panel.classList.add('active');
+        loadMatches(currentLeague);
+        startAutoRefresh();
+    });
+
+    closeBtn.addEventListener('click', () => {
+        panel.classList.remove('active');
+        stopAutoRefresh();
+    });
+
+    // Close on click outside
+    document.addEventListener('click', (e) => {
+        if (panel.classList.contains('active') &&
+            !panel.contains(e.target) &&
+            !toggleBtn.contains(e.target)) {
+            panel.classList.remove('active');
+            stopAutoRefresh();
+        }
+    });
+
+    // Validated League Switching
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            currentLeague = tab.dataset.league;
+            loadMatches(currentLeague);
+        });
+    });
+
+    async function loadMatches(league) {
+        content.innerHTML = `
+            <div class="sports-loading">
+                <div class="spinner"></div>
+                <p>Loading live matches...</p>
+            </div>
+        `;
+
+        const matches = await fetchLiveScores(league);
+        renderMatches(matches);
+    }
+
+    function renderMatches(matches) {
+        if (!matches || matches.length === 0) {
+            content.innerHTML = `
+                <div class="sports-loading">
+                    <p>No matches scheduled today.</p>
+                </div>
+            `;
+            return;
+        }
+
+        content.innerHTML = matches.map(match => `
+            <div class="match-card">
+                <div class="match-header">
+                    <span class="match-league">${match.league}</span>
+                    <div class="match-status ${match.isLive ? 'live' : ''}">
+                        ${getMatchStatus(match)}
+                    </div>
+                </div>
+                <div class="match-teams">
+                    <div class="team-row">
+                        <div class="team-info">
+                            <img src="${match.homeTeam.logo}" class="team-logo" alt="${match.homeTeam.name}" onerror="this.src='placeholder.png'">
+                            <span class="team-name">${match.homeTeam.name}</span>
+                        </div>
+                        <span class="team-score">${match.homeTeam.score}</span>
+                    </div>
+                    <div class="team-row">
+                        <div class="team-info">
+                            <img src="${match.awayTeam.logo}" class="team-logo" alt="${match.awayTeam.name}" onerror="this.src='placeholder.png'">
+                            <span class="team-name">${match.awayTeam.name}</span>
+                        </div>
+                        <span class="team-score">${match.awayTeam.score}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function startAutoRefresh() {
+        stopAutoRefresh();
+        autoRefreshInterval = setInterval(() => {
+            fetchLiveScores(currentLeague).then(renderMatches);
+        }, 30000); // 30s refresh
+    }
+
+    function stopAutoRefresh() {
+        if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+    }
+}
+
+
+// ===========================
 // Initialization
 // ===========================
 async function init() {
@@ -1280,6 +1393,9 @@ async function init() {
 
         // Initialize captions
         renderCaptions('vibes');
+
+        // Initialize Sports Widget
+        initSportsWidget();
 
         console.log('🏖️ EBC Hub initialized with cloud sync!');
     } catch (error) {
