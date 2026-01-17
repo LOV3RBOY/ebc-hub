@@ -33,12 +33,13 @@
 - Drag & drop file upload
 - Click to browse files
 - Supports photos and videos
-- Files stored in browser localStorage
+- **☁️ Cloud storage** - syncs across all team devices
 
 ### ⬇️ Download Options
 - Download individual selected items
 - "Select All" for batch downloads
 - Counter shows selected item count
+- **Real-time sync** - see uploads from teammates instantly
 
 ### 🛠️ Tools Sidebar
 - Collapsible sidebar panel
@@ -51,13 +52,14 @@
 
 | Category | Technology |
 |----------|------------|
-| **Frontend** | Vanilla HTML5, CSS3, JavaScript |
+| **Frontend** | Vanilla HTML5, CSS3, JavaScript (ES Modules) |
 | **Styling** | Custom CSS with CSS Variables |
-| **Storage** | Browser localStorage |
+| **Cloud Storage** | Firebase Storage (files) + Firestore (metadata) |
+| **Local Fallback** | IndexedDB |
 | **Hosting** | GitHub Pages |
 | **Version Control** | Git/GitHub |
 
-No frameworks, no build tools - pure vanilla web technologies for maximum simplicity and speed.
+No frameworks, no build tools - uses Firebase CDN modules for cloud storage with vanilla web technologies.
 
 ---
 
