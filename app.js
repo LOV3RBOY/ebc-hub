@@ -40,6 +40,7 @@ const state = {
     db: null,
     mediaItems: [],
     selectedItems: new Set(),
+    uploadingIds: new Set(), // Track IDs currently being uploaded to prevent duplicates
     currentFilter: 'all',
     currentSort: 'newest',
     searchQuery: '',
@@ -74,8 +75,9 @@ const elements = {
     fileInput: document.getElementById('file-input'),
     dropZone: document.getElementById('drop-zone'),
 
-    // Download
+    // Download & Delete
     downloadSelectedBtn: document.getElementById('download-selected-btn'),
+    deleteSelectedBtn: document.getElementById('delete-selected-btn'),
     selectAllBtn: document.getElementById('select-all-btn'),
     selectedCount: document.getElementById('selected-count'),
 
@@ -262,8 +264,10 @@ function setupRealtimeSync() {
             const docId = change.doc.id;
 
             if (change.type === 'added') {
-                // Only add if not already in local state (avoid duplicates)
-                if (!state.mediaItems.find(item => item.id === data.id)) {
+                // Only add if not already in local state AND not currently being uploaded (avoid duplicates)
+                const alreadyExists = state.mediaItems.find(item => item.id === data.id);
+                const isUploading = state.uploadingIds.has(data.id);
+                if (!alreadyExists && !isUploading) {
                     state.mediaItems.unshift({ ...data, docId });
                     console.log('📥 New media synced:', data.name);
                 }
@@ -388,6 +392,11 @@ async function processFiles(files) {
     let processed = 0;
 
     for (const file of validFiles) {
+        const mediaId = generateId();
+
+        // Mark this ID as uploading to prevent duplicate from sync listener
+        state.uploadingIds.add(mediaId);
+
         try {
             const isImage = file.type.startsWith('image/');
             const isVideo = file.type.startsWith('video/');
@@ -400,7 +409,7 @@ async function processFiles(files) {
             }
 
             const mediaItem = {
-                id: generateId(),
+                id: mediaId,
                 name: file.name,
                 type: isImage ? 'image' : 'video',
                 mimeType: file.type,
@@ -413,8 +422,8 @@ async function processFiles(files) {
             // Upload to Firebase cloud storage
             const cloudItem = await saveMediaToCloud(mediaItem);
 
-            // Add to local state (with downloadURL, without blob to save memory)
-            state.mediaItems.push({
+            // Add to local state directly (sync listener will skip due to uploadingIds)
+            state.mediaItems.unshift({
                 ...cloudItem,
                 blob: null // Don't keep blob in memory after upload
             });
@@ -432,6 +441,9 @@ async function processFiles(files) {
         } catch (error) {
             console.error('Error uploading file:', file.name, error);
             showToast(`Failed to upload ${file.name}`, false);
+        } finally {
+            // Remove from uploading set regardless of success/failure
+            state.uploadingIds.delete(mediaId);
         }
     }
 
@@ -518,28 +530,69 @@ function createMediaCard(item, index) {
                 <span>Photo</span>
             `}
         </div>
+        
+        <!-- AI Caption Button (Top Left) -->
+        ${!isVideo ? `
+        <button class="media-action-btn ai-caption-btn" aria-label="Use for AI Caption" title="Generate AI Caption">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M9 10h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M12 10h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M15 10h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </button>
+        ` : ''}
+
         <div class="media-checkbox" role="checkbox" aria-checked="${state.selectedItems.has(item.id)}">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
         </div>
-        <div class="media-overlay">
+        <div class="media-info">
             <span class="media-filename">${item.name}</span>
             <span class="media-meta">${formatFileSize(item.size)}</span>
         </div>
     `;
 
-    // Open lightbox on click
+    // Double click to open lightbox
+    card.addEventListener('dblclick', () => {
+        openLightbox(index);
+    });
+
+    // Single click to select and update AI focus
     card.addEventListener('click', (e) => {
         if (e.target.closest('.media-checkbox')) {
             e.stopPropagation();
             toggleSelection(item.id);
+            // Also select for AI caption if it's an image
+            if (item.type === 'image') {
+                selectImageForCaption(item);
+            }
+        } else if (e.target.closest('.ai-caption-btn')) {
+            e.stopPropagation();
+            // Explicit AI button click - pass full item
+            selectImageForCaption(item);
         } else {
-            openLightbox(index);
+            // Card body click - toggle selection AND select for AI caption (if image)
+            toggleSelection(item.id);
+            if (item.type === 'image') {
+                selectImageForCaption(item);
+            }
         }
     });
 
     return card;
+}
+
+// Helper to get source for different item types
+function getItemSrc(item) {
+    if (item.downloadURL) return item.downloadURL;
+    if (item.blob) {
+        const blob = item.blob instanceof Blob ? item.blob : new Blob([item.blob], { type: item.mimeType });
+        return URL.createObjectURL(blob);
+    }
+    if (item.thumbnail) return item.thumbnail;
+    return null;
 }
 
 function updateGallery() {
@@ -591,6 +644,7 @@ function updateSelectionUI() {
     // Update badges
     elements.selectedCount.textContent = state.selectedItems.size;
     elements.downloadSelectedBtn.disabled = state.selectedItems.size === 0;
+    elements.deleteSelectedBtn.disabled = state.selectedItems.size === 0;
 
     // Update button text
     elements.selectAllBtn.textContent =
@@ -655,6 +709,44 @@ function downloadSelected() {
     });
 }
 
+async function deleteSelected() {
+    const selectedItems = state.mediaItems.filter(item => state.selectedItems.has(item.id));
+
+    if (selectedItems.length === 0) return;
+
+    // Confirm deletion
+    const confirmMsg = `Are you sure you want to delete ${selectedItems.length} item${selectedItems.length > 1 ? 's' : ''}? This cannot be undone.`;
+    if (!confirm(confirmMsg)) return;
+
+    showToast(`Deleting ${selectedItems.length} items...`, true);
+    let deleted = 0;
+
+    for (const item of selectedItems) {
+        try {
+            // Delete from Firebase (Storage + Firestore)
+            await deleteMediaFromCloud(item);
+
+            // Delete from local IndexedDB
+            await deleteMediaFromDB(item.id);
+
+            // Remove from state
+            state.mediaItems = state.mediaItems.filter(m => m.id !== item.id);
+            state.selectedItems.delete(item.id);
+
+            deleted++;
+            updateToastProgress((deleted / selectedItems.length) * 100);
+            console.log(`🗑️ Deleted: ${item.name}`);
+        } catch (error) {
+            console.error('Error deleting file:', item.name, error);
+        }
+    }
+
+    hideToast(true);
+    updateGallery();
+    updateMediaCount();
+    updateSelectionUI();
+}
+
 // ===========================
 // Lightbox Functions
 // ===========================
@@ -704,19 +796,8 @@ function updateLightboxContent(item) {
 
     elements.lightboxFilename.textContent = item.name;
 
-    // AI Caption Integration
-    // Automatically select this image for AI caption generation
-    if (!isVideo) {
-        // If it's a cloud URL, we can use it directly
-        // If it's a blob, we need to convert it to a data URL if possible or just use the blob URL
-        // Our service handles URLs, so src is fine
-        selectImageForCaption(src);
-    } else {
-        // For video, we might want to use the thumbnail if available
-        if (item.thumbnail) {
-            selectImageForCaption(item.thumbnail);
-        }
-    }
+    // Auto-selection for AI Caption removed to prevent blocking UX
+    // User must explicitly click "Use for AI Caption" on the card
 }
 
 function updateLightboxNav() {
@@ -888,13 +969,19 @@ function copyHashtags() {
 
 /**
  * Handle image selection for AI caption generation
- * Called when user selects an image in the gallery or sets current lightbox image
+ * Called when user selects an image in the gallery
+ * @param {Object} item - The media item object with thumbnail and downloadURL
  */
-function selectImageForCaption(imageSrc) {
-    state.selectedImageForCaption = imageSrc;
+function selectImageForCaption(item) {
+    // Use thumbnail for AI (already base64, no CORS issues)
+    // Use downloadURL or thumbnail for preview
+    const previewSrc = item.downloadURL || item.thumbnail;
+    const aiSrc = item.thumbnail; // Thumbnail is already base64!
+
+    state.selectedImageForCaption = aiSrc;
 
     // Update UI preview
-    elements.aiPreviewImage.src = imageSrc;
+    elements.aiPreviewImage.src = previewSrc;
     elements.aiPreviewImage.classList.remove('hidden');
     elements.selectedImagePreview.classList.add('has-image');
     elements.selectedImagePreview.querySelector('.no-image-selected').classList.add('hidden');
@@ -1080,6 +1167,7 @@ function setupEventListeners() {
     // Selection
     elements.selectAllBtn.addEventListener('click', selectAll);
     elements.downloadSelectedBtn.addEventListener('click', downloadSelected);
+    elements.deleteSelectedBtn.addEventListener('click', deleteSelected);
 
     // Filters
     elements.filterBtns.forEach(btn => {

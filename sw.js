@@ -3,7 +3,7 @@
  * Enables offline functionality and app-like experience
  */
 
-const CACHE_NAME = 'ebc-hub-v1';
+const CACHE_NAME = 'ebc-hub-v5';
 
 // Base path detection (works for both localhost and GitHub Pages)
 const BASE_PATH = self.location.pathname.replace('/sw.js', '');

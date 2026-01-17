@@ -3,7 +3,7 @@
  * Uses Gemini 3 Pro to analyze images and generate contextual captions
  */
 
-const GEMINI_API_KEY = 'AIzaSyA_gnh_KHkzoS5lOYn7c7GF_zcsFDMVTOs';
+const GEMINI_API_KEY = 'AIzaSyA_gnh_KHkzoS5IOYn7c7GF_zcsFDMVTOs';
 const GEMINI_MODEL = 'gemini-2.0-flash'; // Latest vision-capable model
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
@@ -11,18 +11,52 @@ const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/
  * Convert image URL to base64 data
  */
 async function imageUrlToBase64(imageUrl) {
-    const response = await fetch(imageUrl);
-    const blob = await response.blob();
-
     return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            // Remove the data URL prefix to get pure base64
-            const base64 = reader.result.split(',')[1];
-            resolve(base64);
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';
+
+        img.onload = () => {
+            try {
+                const canvas = document.createElement('canvas');
+                // Limit max dimensions to avoid massive payloads
+                const MAX_SIZE = 1024;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_SIZE) {
+                        height *= MAX_SIZE / width;
+                        width = MAX_SIZE;
+                    }
+                } else {
+                    if (height > MAX_SIZE) {
+                        width *= MAX_SIZE / height;
+                        height = MAX_SIZE;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Get data URL (default png, but using jpeg for smaller size)
+                const dataURL = canvas.toDataURL('image/jpeg', 0.8);
+                resolve(dataURL.split(',')[1]);
+            } catch (error) {
+                console.error('Canvas export failed (likely tainted):', error);
+                // Fallback to fetch provided in case CORS is strictly blocked but fetch works
+                reject(error);
+            }
         };
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
+
+        img.onerror = (error) => {
+            console.error('Image load failed:', error);
+            reject(new Error('Failed to load image for processing'));
+        };
+
+        img.src = imageUrl;
     });
 }
 
