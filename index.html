@@ -3,12 +3,27 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="description" content="EBC Hub - Team media sharing platform for photos and videos">
+    <meta name="theme-color" content="#0a0a0f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="EBC Hub">
     <title>EBC Hub | Media Center</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- App Icons -->
+    <link rel="icon" type="image/svg+xml" href="assets/icon-192.svg">
+    <link rel="apple-touch-icon" href="assets/icon-192.svg">
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Styles -->
     <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -295,6 +310,21 @@
     <canvas id="thumbnail-canvas" hidden></canvas>
 
     <script type="module" src="app.js"></script>
+
+    <!-- Service Worker Registration for PWA -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then((registration) => {
+                        console.log('📱 PWA: Service Worker registered', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.warn('📱 PWA: Service Worker registration failed', error);
+                    });
+            });
+        }
+    </script>
 </body>
 
 </html>
